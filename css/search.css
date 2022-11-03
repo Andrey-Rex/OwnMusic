@@ -14,7 +14,7 @@
     font-weight: 300;
     font-size: 14px;
 }
-
+/*убираем крестик из поля поиска*/
 .search__input::-webkit-search-cancel-button {
     display: none;
 }
@@ -24,5 +24,5 @@
     top: 50%;
     transform: translateY(-50%);
     line-height: 0;
-
+/*line-height нужно обнулять у унопок без текста*/
 }
