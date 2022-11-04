@@ -11,9 +11,31 @@
 .catalog__btn-add {
     color: #ffffff;
     grid-column: 1 / -1;
+    justify-self: end;
     display: flex;
+    padding: 16px 0;
     justify-content: end;
     align-items: center;
     gap: 8px;
     font-weight: 600;
+}
+
+@media (max-width: 1024px) {
+    .catalog__container {
+        padding: 0 14px;
+    }
+}
+
+@media (max-width: 560px) {
+    .catalog__container {
+        padding: 0 11px;
+        grid-template-columns: repeat(auto-fill, 148px);
+        gap: 2px;
+    }
+
+    .catalog__btn-add {
+        padding: 12px 0;
+        font-size: 14px;
+        gap: 4px;
+    }
 }
