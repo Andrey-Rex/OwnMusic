@@ -87,14 +87,38 @@ const dataMusic = [
 
 const audio = new Audio();
 const tracksCard = document.getElementsByClassName('track');
+const catalogContainer = document.querySelector('.catalog__container')
 const pauseBtn = document.querySelector('.player__controller-pause');
 const player= document.querySelector('.player');
 const stopBtn = document.querySelector('.player__controller-stop')
 
+const pausePlayer = () => {
+    const trackActive = document.querySelector('.track_condition_active');
+
+    if (audio.paused) {
+       audio.play();
+       pauseBtn.classList.remove('player__icon_condition_play');
+       trackActive.classList.remove('track_condition_pause');
+    } else {
+       audio.pause();
+       pauseBtn.classList.add('player__icon_condition_play');
+       trackActive.classList.add('track_condition_pause');
+    }
+}
+
 const playMusic = (event) => {
+    event.preventDefault();
     const trackActive = event.currentTarget;
 
-    audio.src = trackActive.dataset.track;
+    if (trackActive.classList.contains('track_condition_active')) {
+        pausePlayer();
+        return
+    }
+
+    const id = trackActive.dataset.idTrack;
+    const track = dataMusic.find(item => id === item.id);
+    audio.src = track.mp3;
+
     audio.play();
     pauseBtn.classList.remove('player__icon-play');
     player.classList.add('player_condition_active');
@@ -105,19 +129,13 @@ const playMusic = (event) => {
     trackActive.classList.add('track_condition_active');
 };
 
-for (let i = 0; i < tracksCard.length; i++) {
-    tracksCard[i].addEventListener('click', playMusic);
-}
-
-pauseBtn.addEventListener('click', () => {
-    if (audio.paused) {
-        audio.play();
-        pauseBtn.classList.remove('player__icon_condition_play');
-    } else {
-        audio.pause();
-        pauseBtn.classList.add('player__icon_condition_play');
+const addHandlerTrack = () => {
+    for (let i = 0; i < tracksCard.length; i++) {
+        tracksCard[i].addEventListener('click', playMusic);
     }
-});
+};
+
+pauseBtn.addEventListener('click', pausePlayer);
 
 // stopBtn.addEventListener('click', () => {
 //     if (audio.play) {
@@ -127,3 +145,40 @@ pauseBtn.addEventListener('click', () => {
 //     }
 //
 // })
+const createCard = (data) => {
+    const a = document.createElement('a');
+    a.href = '#';
+    a.className = 'catalog__item track';
+    a.dataset.idTrack = data.id;
+
+    a.innerHTML = `
+        <div class="track__img-wrap">
+            <img src="${data.poster}"
+                 alt="${data.artist} ${data.track}"
+                 class="track__poster"
+                 width="180"
+                 height="180"
+            >
+        </div>
+
+        <div class="track__info track-info">
+            <p class="track-info__title">${data.track}</p>
+            <p class="track-info__artist">${data.artist}</p>
+        </div>
+    `;
+
+    return a;
+};
+
+const renderCatalog = (dataList) => {
+    catalogContainer.textContent = '';
+    const listCards = dataList.map(createCard);
+    catalogContainer.append(...listCards);
+    addHandlerTrack();
+};
+
+const init = () => {
+    renderCatalog(dataMusic);
+};
+
+init();
