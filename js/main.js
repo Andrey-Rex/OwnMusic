@@ -85,12 +85,38 @@ const dataMusic = [
     },
 ];
 
+let playList = [];
+
+const favorites = localStorage.getItem('favorite')
+    ? JSON.parse(localStorage.getItem('favorite'))
+    : [];
+
 const audio = new Audio();
+const favoritesBtn = document.querySelector('.header__favorite-btn');
 const tracksCard = document.getElementsByClassName('track');
 const catalogContainer = document.querySelector('.catalog__container')
-const pauseBtn = document.querySelector('.player__controller-pause');
 const player= document.querySelector('.player');
-const stopBtn = document.querySelector('.player__controller-stop')
+const pauseBtn = document.querySelector('.player__controller-pause');
+const stopBtn = document.querySelector('.player__controller-stop');
+const prevBtn = document.querySelector('.player__controller-prev');
+const nextBtn = document.querySelector('.player__controller-next');
+const likeBtn = document.querySelector('.player__controller-like');
+const muteBtn = document.querySelector('.player__controller-mute');
+const playerProgressInput = document.querySelector('.player__progress-input');
+const headerLogo = document.querySelector('.header__logo');
+
+const playerTimePassed = document.querySelector('.player__time-passed');
+const playerTimeTotal= document.querySelector('.player__time-total');
+const playerVolumeInput = document.querySelector('.player__volume-input');
+
+const catalogAddBtn = document.createElement('button');
+catalogAddBtn.classList.add('catalog__btn-add');
+catalogAddBtn.innerHTML = `
+    <span>Увидеть всё</span>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8.59 16.59L13.17 12L8.59 7.41L10 6L16 12L10 18L8.59 16.59Z"/>
+    </svg>
+`
 
 const pausePlayer = () => {
     const trackActive = document.querySelector('.track_condition_active');
@@ -114,19 +140,41 @@ const playMusic = (event) => {
         pausePlayer();
         return
     }
-
+    let i = 0;
     const id = trackActive.dataset.idTrack;
-    const track = dataMusic.find(item => id === item.id);
+
+    const index = favorites.indexOf(id)
+    if (index !== -1) {
+        likeBtn.classList.add('player__icon_condition_like_active')
+    } else {
+        likeBtn.classList.remove('player__icon_condition_like_active')
+    }
+
+    // const track = dataMusic.find(item => id === item.id);
+    const track = playList.find((item,index) => {
+        i = index;
+        return id === item.id;
+    });
     audio.src = track.mp3;
 
     audio.play();
+
     pauseBtn.classList.remove('player__icon-play');
     player.classList.add('player_condition_active');
 
+    const prevTrack = i === 0 ? playList.length - 1 : i - 1;
+    const nextTrack = i + 1 === playList.length ? 0 : i + 1;
+    prevBtn.dataset.idTrack = playList[prevTrack].id;
+    nextBtn.dataset.idTrack = playList[nextTrack].id;
+    likeBtn.dataset.idTrack = id;
+
     for (let i = 0; i < tracksCard.length; i++) {
-        tracksCard[i].classList.remove('track_condition_active');
+        if (id === tracksCard[i].dataset.idTrack){
+            tracksCard[i].classList.add('track_condition_active');
+        } else {
+            tracksCard[i].classList.remove('track_condition_active');
+        }
     }
-    trackActive.classList.add('track_condition_active');
 };
 
 const addHandlerTrack = () => {
@@ -137,14 +185,13 @@ const addHandlerTrack = () => {
 
 pauseBtn.addEventListener('click', pausePlayer);
 
-// stopBtn.addEventListener('click', () => {
-//     if (audio.play) {
-//         audio.stop();
-//     } else {
-//         audio
-//     }
-//
-// })
+stopBtn.addEventListener('click', () => {
+   audio.src = '';
+   player.classList.remove('player_condition_active');
+   document.querySelector('.track_condition_active').classList.remove('track_condition_active')
+});
+
+
 const createCard = (data) => {
     const a = document.createElement('a');
     a.href = '#';
@@ -171,14 +218,110 @@ const createCard = (data) => {
 };
 
 const renderCatalog = (dataList) => {
+    playList = [...dataList];
     catalogContainer.textContent = '';
     const listCards = dataList.map(createCard);
     catalogContainer.append(...listCards);
     addHandlerTrack();
 };
 
-const init = () => {
-    renderCatalog(dataMusic);
+const checkCount = (i = 1) => {
+    tracksCard[0]
+    if (catalogContainer.clientHeight > tracksCard[0].clientHeight * 3) {
+        tracksCard[tracksCard.length - i].style.display = 'none';
+        checkCount(i + 1);
+    } else if (i !== 1) {
+        catalogContainer.append(catalogAddBtn);
+    }
+
+
 };
+
+const updateTime = () => {
+    const duration = audio.duration;
+    const currentTime = audio.currentTime;
+    const progress = (currentTime / duration) * playerProgressInput.max;
+    playerProgressInput.value = progress ? progress : 0;
+
+    const minutesPassed = Math.floor(currentTime / 60)  || '0';
+    const secPassed = Math.floor(currentTime % 60) || '0';
+
+    const minutesDuration = Math.floor(duration / 60)  || '0';
+    const secDuration = Math.floor(duration % 60) || '0';
+
+    playerTimePassed.textContent = `${minutesPassed}:${secPassed < 10 ? '0' + secPassed : secPassed}`;
+    playerTimeTotal.textContent = `${minutesDuration}:${secDuration < 10 ? '0' + secDuration : secDuration}`;
+}
+
+const init = () => {
+    audio.volume = localStorage.getItem('volume') || 1;
+    playerVolumeInput.value = audio.volume * 100;
+
+    renderCatalog(dataMusic);
+    checkCount();
+    catalogAddBtn.addEventListener('click', () => {
+        [...tracksCard].forEach((trackCard) => {
+            trackCard.style.display = '';
+            catalogAddBtn.remove();
+        });
+    });
+
+    prevBtn.addEventListener('click', playMusic);
+    nextBtn.addEventListener('click', playMusic);
+
+    audio.addEventListener('ended', () => {
+        nextBtn.dispatchEvent(new Event('click', {bubbles: true}));
+    });
+
+    audio.addEventListener('timeupdate', updateTime);
+    playerProgressInput.addEventListener('change', () => {
+        const progress = playerProgressInput.value;
+        audio.currentTime = (progress / playerProgressInput.max) * audio.duration;
+    });
+
+    favoritesBtn.addEventListener('click', () => {
+        const data = dataMusic.filter((item) => favorites.includes(item.id))
+        renderCatalog(data);
+        checkCount();
+    });
+
+    headerLogo.addEventListener('click', () => {
+        renderCatalog(dataMusic);
+        checkCount();
+    });
+
+    likeBtn.addEventListener('click', () => {
+        const index = favorites.indexOf(likeBtn.dataset.idTrack)
+        if (index === -1) {
+            favorites.push(likeBtn.dataset.idTrack);
+            likeBtn.classList.add('player__icon_condition_like_active')
+        } else {
+            favorites.splice(index, 1);
+            likeBtn.classList.remove('player__icon_condition_like_active')
+        }
+
+        localStorage.setItem('favorite', JSON.stringify(favorites))
+    });
+
+    playerVolumeInput.addEventListener('input', () => {
+        const value = playerVolumeInput.value;
+        audio.volume = value / 100;
+    });
+
+    muteBtn.addEventListener('click', () => {
+        if (audio.volume) {
+            localStorage.setItem('volume', audio.volume);
+            audio.volume = 0;
+            muteBtn.classList.add('player__icon_condition_mute');
+            playerVolumeInput.value = 0;
+        } else {
+            audio.volume = localStorage.getItem('volume');
+            muteBtn.classList.remove('player__icon_condition_mute');
+            playerVolumeInput.value = audio.volume * 100;
+        }
+    });
+};
+
+
 
 init();
